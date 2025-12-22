@@ -1,7 +1,7 @@
 use crate::{
-    demon::{Demon, FullDemon, MinimalDemon},
+    demon::{Demon, Difficulty, FullDemon, MinimalDemon},
     error::{DemonlistError, Result},
-    player::{recompute_scores, DatabasePlayer},
+    player::{DatabasePlayer, recompute_scores},
 };
 use log::{debug, info, warn};
 use pointercrate_core::util::{non_nullable, nullable};
@@ -30,6 +30,9 @@ pub struct PatchDemon {
 
     #[serde(default, deserialize_with = "non_nullable")]
     pub publisher: Option<String>,
+
+    #[serde(default, deserialize_with = "non_nullable")]
+    pub difficulty: Option<Difficulty>,
 }
 
 impl FullDemon {
@@ -87,6 +90,10 @@ impl Demon {
 
         if let Some(requirement) = patch.requirement {
             self.set_requirement(requirement, connection).await?;
+        }
+
+        if let Some(difficulty) = patch.difficulty {
+            self.set_difficulty(difficulty, connection).await?;
         }
 
         Ok(self)
@@ -166,6 +173,20 @@ impl Demon {
             .await?;
 
         self.thumbnail = thumbnail;
+
+        Ok(())
+    }
+
+    pub async fn set_difficulty(&mut self, difficulty: Difficulty, connection: &mut PgConnection) -> Result<()> {
+        sqlx::query!(
+            "UPDATE demons SET difficulty = $1::level_difficulty WHERE id = $2",
+            Difficulty::to_sql(difficulty) as _,
+            self.base.id
+        )
+        .execute(connection)
+        .await?;
+
+        self.difficulty = difficulty;
 
         Ok(())
     }

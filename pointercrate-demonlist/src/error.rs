@@ -194,6 +194,12 @@ pub enum DemonlistError {
     /// Error Code `42235`
     #[display("Level ID needs to be positive")]
     InvalidLevelId,
+
+    /// `422 UNPROCESSABLE ENTITY` variant
+    /// 
+    /// Error Code 42236
+    #[display("Enjoyment must be between 0 and 10")]
+    InvalidEnjoyment,
 }
 
 impl std::error::Error for DemonlistError {}
@@ -240,6 +246,7 @@ impl PointercrateError for DemonlistError {
             RawRequired => 42232,
             MalformedRawUrl => 42233,
             InvalidLevelId => 42235,
+            InvalidEnjoyment => 42236,
         }
     }
 }

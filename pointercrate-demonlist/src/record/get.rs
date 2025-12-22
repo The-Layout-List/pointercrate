@@ -23,6 +23,7 @@ struct FetchedRecord {
     position: i16,
     submitter_id: i32,
     submitter_banned: bool,
+    enjoyment: Option<i16>,
 }
 
 impl FullRecord {
@@ -38,6 +39,7 @@ impl FullRecord {
                 video: row.video,
                 raw_footage: row.raw_footage,
                 status: RecordStatus::from_sql(&row.status),
+                enjoyment: row.enjoyment,
                 player: DatabasePlayer {
                     id: row.player_id,
                     name: row.player_name,
@@ -62,7 +64,7 @@ impl FullRecord {
 
 pub async fn approved_records_by(player: &DatabasePlayer, connection: &mut PgConnection) -> Result<Vec<MinimalRecordD>> {
     let mut stream = sqlx::query!(
-        r#"SELECT records.id, progress, CASE WHEN players.link_banned THEN NULL ELSE records.video::text END, demons.id AS demon_id, 
+        r#"SELECT records.id, progress, enjoyment, CASE WHEN players.link_banned THEN NULL ELSE records.video::text END, demons.id AS demon_id, 
          demons.name, demons.position FROM records INNER JOIN demons ON records.demon = demons.id INNER JOIN players ON players.id 
          = $1 WHERE status_ = 'APPROVED' AND records.player = $1"#,
         player.id
@@ -79,6 +81,7 @@ pub async fn approved_records_by(player: &DatabasePlayer, connection: &mut PgCon
             progress: row.progress,
             video: row.video,
             status: RecordStatus::Approved,
+            enjoyment: row.enjoyment,
             demon: MinimalDemon {
                 id: row.demon_id,
                 position: row.position,

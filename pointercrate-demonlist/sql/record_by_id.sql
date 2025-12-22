@@ -1,4 +1,4 @@
-SELECT progress,
+SELECT progress, enjoyment,
        CASE WHEN players.link_banned THEN NULL ELSE records.video::text END,
        CASE WHEN players.link_banned THEN NULL ELSE records.raw_footage::text END,
        status_::text AS "status!: String" ,

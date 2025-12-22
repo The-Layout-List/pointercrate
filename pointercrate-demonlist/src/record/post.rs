@@ -23,6 +23,7 @@ pub struct Submission {
     raw_footage: Option<String>,
     #[serde(default)]
     status: RecordStatus,
+    enjoyment: Option<i16>,
 
     /// An initial, submitter provided note for the demon.
     #[serde(default)]
@@ -35,7 +36,7 @@ pub struct NormalizedSubmission {
     player: DatabasePlayer,
     demon: MinimalDemon,
     status: RecordStatus,
-
+    enjoyment: Option<i16>,
     video: Option<String>,
     raw_footage: Option<String>,
     note: Option<String>,
@@ -50,6 +51,7 @@ pub struct ValidatedSubmission {
     player: DatabasePlayer,
     demon: MinimalDemon,
     note: Option<String>,
+    enjoyment: Option<i16>,
 }
 
 impl Submission {
@@ -77,6 +79,7 @@ impl Submission {
             player,
             demon,
             status: self.status,
+            enjoyment: self.enjoyment,
             video,
             raw_footage: self.raw_footage,
             note: self.note,
@@ -111,6 +114,13 @@ impl NormalizedSubmission {
         // Check if the record meets the record requirement for this demon
         if self.progress > 100 || self.progress < requirement {
             return Err(DemonlistError::InvalidProgress { requirement });
+        }
+
+        // Check if the record's enjoyment is between 0 and 10
+        if let Some(enjoyment) = self.enjoyment {
+            if enjoyment < 0 || enjoyment > 10 {
+                return Err(DemonlistError::InvalidEnjoyment)
+            } 
         }
 
         debug!("Submission is valid, checking for duplicates!");
@@ -163,6 +173,7 @@ impl NormalizedSubmission {
             video: self.video,
             raw_footage: self.raw_footage,
             status: self.status,
+            enjoyment: self.enjoyment,
             player: self.player,
             demon: self.demon,
             note: self.note,
@@ -191,6 +202,7 @@ impl ValidatedSubmission {
             video: self.video,
             raw_footage: self.raw_footage,
             status: RecordStatus::Submitted,
+            enjoyment: self.enjoyment,
             player: self.player,
             demon: self.demon,
             submitter: Some(submitter),
@@ -243,6 +255,7 @@ mod tests {
                 name: "Bloodbath".to_string(),
             },
             status: RecordStatus::Submitted,
+            enjoyment: Some(10),
             video: None,
             raw_footage: None,
             note: None,

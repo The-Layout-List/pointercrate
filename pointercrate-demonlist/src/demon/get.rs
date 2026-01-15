@@ -1,6 +1,6 @@
 use crate::{
     creator::creators_of,
-    demon::{Demon, FullDemon, MinimalDemon, TimeShiftedDemon},
+    demon::{Demon, Difficulty, FullDemon, MinimalDemon, TimeShiftedDemon},
     error::{DemonlistError, Result},
     player::DatabasePlayer,
     record::approved_records_on,
@@ -146,6 +146,7 @@ struct FetchedDemon {
     verifier_name: String,
     verifier_banned: bool,
     level_id: Option<i64>,
+    difficulty: String,
 }
 
 impl From<FetchedDemon> for Demon {
@@ -170,6 +171,7 @@ impl From<FetchedDemon> for Demon {
                 banned: fetched.verifier_banned,
             },
             level_id: fetched.level_id.map(|id| id as u64),
+            difficulty: Difficulty::from_sql(&fetched.difficulty)
         }
     }
 }
@@ -211,6 +213,7 @@ pub async fn list_at(connection: &mut PgConnection, at: NaiveDateTime) -> Result
                     banned: row.verifier_banned,
                 },
                 level_id: row.level_id.map(|i| i as u64),
+                difficulty: Difficulty::from_sql(&row.difficulty),
             },
             position_now: row.current_position,
         })

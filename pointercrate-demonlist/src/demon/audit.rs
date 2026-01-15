@@ -1,6 +1,6 @@
 use crate::error::Result;
 
-use crate::demon::MinimalDemon;
+use crate::demon::{MinimalDemon, Difficulty};
 use chrono::{NaiveDateTime, NaiveTime};
 use futures::StreamExt;
 use pointercrate_core::audit::{AuditLogEntry, AuditLogEntryType, NamedId};
@@ -16,6 +16,7 @@ pub struct DemonModificationData {
     pub video: Option<String>,
     pub verifier: Option<NamedId>,
     pub publisher: Option<NamedId>,
+    pub difficulty: Option<Difficulty>,
 }
 
 #[derive(Serialize, Debug)]
@@ -217,7 +218,8 @@ pub async fn audit_log_for_demon(demon_id: i32, connection: &mut PgConnection) -
                 verifier,
                 verifiers.name::text as verifier_name,
                 publisher,
-                publishers.name::text as publisher_name
+                publishers.name::text as publisher_name,
+                difficulty::text
            FROM demon_modifications
            LEFT OUTER JOIN members ON members.member_id = userid
            LEFT OUTER JOIN players AS verifiers ON verifier=verifiers.id
@@ -241,6 +243,10 @@ pub async fn audit_log_for_demon(demon_id: i32, connection: &mut PgConnection) -
                 position: row.position,
                 requirement: row.requirement,
                 video: row.video,
+                difficulty: match row.difficulty {
+                    Some(diff) => Some(Difficulty::from_sql(&diff)),
+                    None => None
+                },
                 verifier: match row.verifier {
                     Some(id) => Some(NamedId {
                         name: row.verifier_name,

@@ -12,6 +12,7 @@ pub struct RecordModificationData {
     status: Option<RecordStatus>,
     player: Option<NamedId>,
     demon: Option<NamedId>,
+    enjoyment: Option<i16>,
 }
 
 /// Gets all audit log entries for the given record, in chronological order
@@ -49,6 +50,7 @@ pub async fn audit_log_for_record(record_id: i32, connection: &mut PgConnection)
                   members.name AS "username?",
                   userid,
                   progress,
+                  enjoyment,
                   record_modifications.video,
                   status_::TEXT,
                   players.name::TEXT AS player_name,
@@ -74,6 +76,7 @@ pub async fn audit_log_for_record(record_id: i32, connection: &mut PgConnection)
                 id: record_id,
                 r#type: AuditLogEntryType::Modification(RecordModificationData {
                     progress: modification.progress,
+                    enjoyment: modification.enjoyment,
                     status: modification.status_.as_deref().map(RecordStatus::from_sql),
                     player: match modification.player_id {
                         Some(id) => Some(NamedId {

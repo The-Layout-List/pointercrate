@@ -1,5 +1,5 @@
 use crate::{
-    demon::{Demon, MinimalDemon},
+    demon::{Demon, Difficulty, MinimalDemon},
     player::DatabasePlayer,
 };
 use futures::stream::StreamExt;
@@ -112,6 +112,7 @@ impl Paginatable<DemonIdPagination> for Demon {
                     banned: row.get("verifier_banned"),
                 },
                 level_id: row.get::<Option<i64>, _>("level_id").map(|id| id as u64),
+                difficulty: Difficulty::from_sql(row.get("demon_difficulty"))
             })
         }
 
@@ -224,6 +225,7 @@ impl Paginatable<DemonPositionPagination> for Demon {
                     banned: row.get("verifier_banned"),
                 },
                 level_id: row.get::<Option<i64>, _>("level_id").map(|id| id as u64),
+                difficulty: Difficulty::from_sql(row.get("demon_difficulty"))
             })
         }
 

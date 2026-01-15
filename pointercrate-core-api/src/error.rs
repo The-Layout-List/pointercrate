@@ -1,16 +1,7 @@
-use crate::localization::LOCALE_COOKIE_NAME;
-use crate::preferences::{ClientPreferences, PreferenceManager};
-use crate::response::Page;
-use log::info;
 use pointercrate_core::error::PointercrateError;
-use pointercrate_core::localization::{LocaleConfiguration, LANGUAGE};
-use pointercrate_core_pages::error::ErrorFragment;
-use pointercrate_core_pages::PageFragment;
 use rocket::outcome::Outcome;
-use rocket::tokio::runtime::Handle;
-use rocket::tokio::task::block_in_place;
 use rocket::{
-    http::{MediaType, Status},
+    http::{Status},
     response::Responder,
     serde::json::Json,
     Request, Response,
@@ -30,42 +21,8 @@ pub struct ErrorResponder {
 
 impl<'r> Responder<'r, 'static> for ErrorResponder {
     fn respond_to(self, request: &'r Request<'_>) -> rocket::response::Result<'static> {
-        let accept = match request.accept() {
-            None => {
-                info!("No ACCEPT header set, assuming application/json");
-
-                &MediaType::JSON
-            },
-            Some(accept) => &accept.preferred().0,
-        };
-
         let status = Status::from_code(self.error_code / 100).unwrap_or(Status::InternalServerError);
-
-        if *accept == MediaType::HTML {
-            let preference_manager = request.rocket().state::<PreferenceManager>().ok_or(Status::InternalServerError)?;
-            let preferences = ClientPreferences::from_cookies(request.cookies(), preference_manager);
-
-            let language = preferences.get(LOCALE_COOKIE_NAME).ok_or(Status::InternalServerError)?;
-            let lang_id = LocaleConfiguration::get().by_code(language);
-
-            let fragment = block_in_place(move || {
-                Handle::current().block_on(async {
-                    LANGUAGE
-                        .scope(lang_id.language, async {
-                            PageFragment::from(ErrorFragment {
-                                status: self.error_code / 100,
-                                reason: status.reason_lossy().to_string(),
-                                message: self.message,
-                            })
-                        })
-                        .await
-                })
-            });
-
-            Response::build_from(Page::new(fragment).respond_to(request)?).status(status).ok()
-        } else {
-            Response::build_from(Json(self).respond_to(request)?).status(status).ok()
-        }
+        Response::build_from(Json(self).respond_to(request)?).status(status).ok()
     }
 }
 

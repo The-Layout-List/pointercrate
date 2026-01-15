@@ -31,6 +31,9 @@ pub struct PatchRecord {
 
     #[serde(default, deserialize_with = "non_nullable")]
     demon_id: Option<i32>,
+
+    #[serde(default, deserialize_with = "nullable")]
+    enjoyment: Option<Option<i16>>,
 }
 
 impl FullRecord {
@@ -51,6 +54,13 @@ impl FullRecord {
 
         if let Some(status) = data.status {
             self.set_status(status, connection).await?
+        }
+
+        if let Some(enjoyment) = data.enjoyment {
+            match enjoyment {
+                None => self.delete_enjoyment(connection).await?,
+                Some(enjoyment) => self.set_enjoyment(enjoyment, connection).await?,
+            }
         }
 
         if let Some(player) = data.player {
@@ -218,6 +228,30 @@ impl FullRecord {
 
         self.video = Some(video);
 
+        Ok(())
+    }
+
+    pub async fn delete_enjoyment(&mut self, connection: &mut PgConnection) -> Result<()> {
+        sqlx::query!("UPDATE records SET enjoyment = NULL WHERE id = $1", self.id)
+            .execute(connection)
+            .await?;
+
+        self.enjoyment = None;
+        Ok(())
+    }
+
+    pub async fn set_enjoyment(&mut self, enjoyment: i16, connection: &mut PgConnection) -> Result<()> {
+
+        
+        if enjoyment < 0 || enjoyment > 10 {
+            return Err(DemonlistError::InvalidEnjoyment)
+        }
+
+        sqlx::query!("UPDATE records SET enjoyment = $1 WHERE id = $2", enjoyment, self.id)
+            .execute(connection)
+            .await?;
+
+        self.enjoyment = Some(enjoyment);
         Ok(())
     }
 

@@ -1,6 +1,5 @@
 use crate::{TestClient, TestRequest};
 use pointercrate_core::etag::Taggable;
-use pointercrate_core::localization::LocalesLoader;
 use pointercrate_core::{permission::PermissionsManager, pool::PointercratePool};
 use pointercrate_core_api::preferences::PreferenceManager;
 use pointercrate_demonlist::demon::FullDemon;
@@ -11,7 +10,6 @@ use pointercrate_demonlist::{
     LIST_ADMINISTRATOR, LIST_HELPER, LIST_MODERATOR,
 };
 use pointercrate_user::auth::{AuthenticatedUser, PasswordOrBrowser};
-use pointercrate_user_pages::account::AccountPageConfig;
 use rocket::{http::Status, local::asynchronous::Client};
 use sqlx::{pool::PoolConnection, PgConnection, Pool, Postgres};
 use std::{net::IpAddr, str::FromStr};
@@ -26,11 +24,8 @@ pub async fn setup_rocket(pool: Pool<Postgres>) -> (TestClient, PoolConnection<P
         .implies(LIST_ADMINISTRATOR, LIST_MODERATOR)
         .implies(LIST_MODERATOR, LIST_HELPER);
 
-    LocalesLoader::empty();
-
     let rocket = pointercrate_demonlist_api::setup(rocket::build().manage(PointercratePool::from(pool)))
         .manage(permissions)
-        .manage(AccountPageConfig::default())
         .manage(PreferenceManager::default().preference("locale", "en"));
 
     // generate some data
@@ -102,7 +97,7 @@ pub async fn add_simple_record(progress: i16, player: i32, demon: i32, status: R
 impl TestClient {
     pub async fn patch_player(
         &self, player_id: i32, auth_context: &AuthenticatedUser<PasswordOrBrowser>, patch: serde_json::Value,
-    ) -> TestRequest {
+    ) -> TestRequest<'_> {
         let player: FullPlayer = self
             .get(format!("/api/v1/players/{}/", player_id))
             .expect_status(Status::Ok)

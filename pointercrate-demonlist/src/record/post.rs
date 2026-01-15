@@ -6,7 +6,6 @@ use crate::{
     submitter::Submitter,
 };
 use derive_more::Display;
-use log::debug;
 use serde::Deserialize;
 use sqlx::PgConnection;
 use url::Url;
@@ -23,6 +22,7 @@ pub struct Submission {
     raw_footage: Option<String>,
     #[serde(default)]
     status: RecordStatus,
+    enjoyment: Option<i16>,
 
     /// An initial, submitter provided note for the demon.
     #[serde(default)]
@@ -35,7 +35,7 @@ pub struct NormalizedSubmission {
     player: DatabasePlayer,
     demon: MinimalDemon,
     status: RecordStatus,
-
+    enjoyment: Option<i16>,
     video: Option<String>,
     raw_footage: Option<String>,
     note: Option<String>,
@@ -50,6 +50,7 @@ pub struct ValidatedSubmission {
     player: DatabasePlayer,
     demon: MinimalDemon,
     note: Option<String>,
+    enjoyment: Option<i16>,
 }
 
 impl Submission {
@@ -77,6 +78,7 @@ impl Submission {
             player,
             demon,
             status: self.status,
+            enjoyment: self.enjoyment,
             video,
             raw_footage: self.raw_footage,
             note: self.note,
@@ -113,38 +115,11 @@ impl NormalizedSubmission {
             return Err(DemonlistError::InvalidProgress { requirement });
         }
 
-        debug!("Submission is valid, checking for duplicates!");
-
-        // Search for existing records. If a video exists, we also check if a record with
-        // exactly that video exists.
-
-        if let Some(ref video) = self.video {
-            if let Some(row) = sqlx::query!(r#"SELECT id, status_::text as "status_!: String" FROM records WHERE video = $1"#, video.to_string())
-                .fetch_optional(&mut *connection) // FIXME(sqlx)
-                .await?
-            {
-                return Err(DemonlistError::SubmissionExists {
-                    existing: row.id,
-                    status: RecordStatus::from_sql(&row.status_),
-                });
-            }
-        }
-
-        let existing = sqlx::query!(
-            r#"SELECT id, status_::text as "status_!: String" FROM records WHERE demon = $1 AND player = $2 AND (status_ = 'REJECTED' OR status_ = 
-             'UNDER_CONSIDERATION' OR (status_ = 'APPROVED' AND progress >= $3)) LIMIT 1"#,
-            self.demon.id,
-            self.player.id,
-            self.progress
-        )
-            .fetch_optional(&mut *connection)
-            .await?;
-
-        if let Some(row) = existing {
-            return Err(DemonlistError::SubmissionExists {
-                existing: row.id,
-                status: RecordStatus::from_sql(&row.status_),
-            });
+        // Check if the record's enjoyment is between 0 and 10
+        if let Some(enjoyment) = self.enjoyment {
+            if enjoyment < 0 || enjoyment > 10 {
+                return Err(DemonlistError::InvalidEnjoyment)
+            } 
         }
 
         match self.raw_footage {
@@ -163,6 +138,7 @@ impl NormalizedSubmission {
             video: self.video,
             raw_footage: self.raw_footage,
             status: self.status,
+            enjoyment: self.enjoyment,
             player: self.player,
             demon: self.demon,
             note: self.note,
@@ -191,6 +167,7 @@ impl ValidatedSubmission {
             video: self.video,
             raw_footage: self.raw_footage,
             status: RecordStatus::Submitted,
+            enjoyment: self.enjoyment,
             player: self.player,
             demon: self.demon,
             submitter: Some(submitter),
@@ -243,6 +220,7 @@ mod tests {
                 name: "Bloodbath".to_string(),
             },
             status: RecordStatus::Submitted,
+            enjoyment: Some(10),
             video: None,
             raw_footage: None,
             note: None,

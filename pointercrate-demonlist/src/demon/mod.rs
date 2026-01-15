@@ -10,9 +10,10 @@ use crate::{
     record::MinimalRecordP,
 };
 use derive_more::Display;
+use std::fmt::{Display as DisplayFmt, Formatter};
 use log::info;
 use pointercrate_core::etag::Taggable;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Deserializer, Serializer};
 use sqlx::PgConnection;
 use std::{
     collections::hash_map::DefaultHasher,
@@ -29,6 +30,102 @@ mod post;
 pub struct TimeShiftedDemon {
     pub current_demon: Demon,
     pub position_now: i16,
+}
+
+/// The difficulty tiers a level can be in
+#[derive(Debug, Eq, PartialEq, Clone, Copy, Hash)]
+pub enum Difficulty {
+    Silent,
+    Legendary,
+    Extreme,
+    Mythical,
+    Insane,
+    Hard,
+    Medium,
+    Easy,
+    Beginner
+}
+
+impl Difficulty {
+    pub fn to_sql(self) -> String {
+        match self {
+            Self::Silent => "silent",
+            Self::Legendary => "legendary",
+            Self::Extreme => "extreme",
+            Self::Mythical => "mythical",
+            Self::Insane => "insane",
+            Self::Hard => "hard",
+            Self::Medium => "medium",
+            Self::Easy => "easy",
+            Self::Beginner => "beginner",
+        }
+        .to_owned()
+    }
+
+    fn from_sql(sql: &str) -> Self {
+        match sql {
+            "silent" => Self::Silent,
+            "legendary" => Self::Legendary,
+            "extreme" => Self::Extreme,
+            "mythical" => Self::Mythical,
+            "insane" => Self::Insane,
+            "hard" => Self::Hard,
+            "medium" => Self::Medium,
+            "easy" => Self::Easy,
+            "beginner" => Self::Beginner,
+            _ => panic!("invalid difficulty: {}", sql),
+        }
+    }
+}
+
+impl DisplayFmt for Difficulty {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            Difficulty::Silent => write!(f, "silent"),
+            Difficulty::Legendary => write!(f, "legendary"),
+            Difficulty::Extreme => write!(f, "extreme"),
+            Difficulty::Mythical => write!(f, "mythical"),
+            Difficulty::Insane => write!(f, "insane"),
+            Difficulty::Hard => write!(f, "hard"),
+            Difficulty::Medium => write!(f, "medium"),
+            Difficulty::Easy => write!(f, "easy"),
+            Difficulty::Beginner => write!(f, "beginner"),
+        }
+    }
+}
+
+impl Serialize for Difficulty {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for Difficulty {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let string = String::deserialize(deserializer)?.to_lowercase();
+
+        match &string[..] {
+            "silent" => Ok(Difficulty::Silent),
+            "legendary" => Ok(Difficulty::Legendary),
+            "extreme" => Ok(Difficulty::Extreme),
+            "mythical" => Ok(Difficulty::Mythical),
+            "insane" => Ok(Difficulty::Insane),
+            "hard" => Ok(Difficulty::Hard),
+            "medium" => Ok(Difficulty::Medium),
+            "easy" => Ok(Difficulty::Easy),
+            "beginner" => Ok(Difficulty::Beginner),
+            _ => Err(serde::de::Error::invalid_value(
+                serde::de::Unexpected::Str(&string),
+                &"'silent', 'legendary', 'extreme', 'mythical', 'insane', 'hard', 'medium', 'easy' or 'beginner'",
+            )),
+        }
+    }
 }
 
 /// Struct modelling a demon. These objects are returned from the paginating `/demons/` endpoint
@@ -57,6 +154,9 @@ pub struct Demon {
     /// This is automatically queried based on the level name, but can be manually overridden by a
     /// list mod.
     pub level_id: Option<u64>,
+
+    /// This [`Demon`]'s difficulty tier
+    pub difficulty: Difficulty,
 }
 
 /// Absolutely minimal representation of a demon to be sent when a demon is part of another object

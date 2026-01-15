@@ -9,11 +9,8 @@ edition.workspace = true
 [dependencies]
 rocket = { workspace = true }
 pointercrate-demonlist = {path = "../pointercrate-demonlist"}
-pointercrate-demonlist-pages = {path = "../pointercrate-demonlist-pages"}
 pointercrate-core = {path = "../pointercrate-core"}
 pointercrate-core-api = {path = "../pointercrate-core-api"}
-pointercrate-core-pages = {path = "../pointercrate-core-pages"}
-pointercrate-core-macros = {path = "../pointercrate-core-macros"}
 pointercrate-user = {path = "../pointercrate-user"}
 pointercrate-user-api = {path = "../pointercrate-user-api"}
 pointercrate-integrate = {path = "../pointercrate-integrate"}
@@ -28,4 +25,4 @@ governor = "0.10.1"
 rand = "0.9.2"
 
 [features]
-geolocation = ["pointercrate-demonlist-pages/geolocation"]
+geolocation = []

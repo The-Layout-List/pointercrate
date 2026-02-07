@@ -66,7 +66,7 @@ impl GeolocationProvider for IpWhoIsGeolocationProvider {
 #[rocket::launch]
 async fn rocket() -> _ {
     // Load the configuration from your .env file
-    dotenv::dotenv().unwrap();
+    dotenv::dotenv().ok();
 
     // Initialize a database connection pool to the database specified by the
     // DATABASE_URL environment variable
